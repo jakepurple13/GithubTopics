@@ -74,7 +74,7 @@ class Network {
 
         client.get(url).body<GithubTopics>().items.map {
             val date = Instant.parse(it.pushedAt).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            it.copy(pushedAt = timePrinter.format(Date(date)) + " on\n" + format.format(date))
+            it.copy(pushedAt = "Updated " + timePrinter.format(Date(date)) + " on\n" + format.format(date))
         }
     }
 }

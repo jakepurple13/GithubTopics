@@ -101,7 +101,7 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.fillMaxSize(),
                     state = state
-                ) { items(vm.items) { TopicItem(it) } }
+                ) { items(vm.items) { TopicItem(it, vm::addTopic) } }
 
                 PullRefreshIndicator(
                     refreshing = vm.isLoading, state = pullRefreshState,
@@ -152,7 +152,7 @@ private fun Context.openWebPage(url: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopicItem(item: GitHubTopic) {
+fun TopicItem(item: GitHubTopic, onTopicClick: (String) -> Unit) {
     val context = LocalContext.current
     OutlinedCard(
         onClick = { context.openWebPage(item.htmlUrl) }
@@ -183,14 +183,14 @@ fun TopicItem(item: GitHubTopic) {
                     AssistChip(
                         label = { Text(it) },
                         modifier = Modifier.padding(2.dp),
-                        onClick = {}
+                        onClick = { onTopicClick(it) }
                     )
                 }
             }
 
             Row {
                 Text(
-                    text = "Updated ${item.pushedAt}",
+                    text = item.pushedAt,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Start,
                     modifier = Modifier
