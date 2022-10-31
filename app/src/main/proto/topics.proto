@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option java_package = "com.programmersbox.githubtopics";
+option java_multiple_files = true;
+
+message TopicSettings {
+  repeated string topicList = 1;
+  string currentTopic = 2;
+}

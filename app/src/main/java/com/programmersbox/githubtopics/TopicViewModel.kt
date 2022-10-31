@@ -4,13 +4,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class TopicViewModel : ViewModel() {
+class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() {
 
     companion object {
         val TOPICS = arrayOf("jetpack-compose")
@@ -20,17 +24,32 @@ class TopicViewModel : ViewModel() {
     val items = mutableStateListOf<GitHubTopic>()
     var isLoading by mutableStateOf(true)
     private var page = 1
+    var currentTopic by mutableStateOf("")
+    val topicList = mutableStateListOf<String>()
 
     init {
-        viewModelScope.launch {
-            loadTopics()
-        }
+        store.data
+            .map { it.currentTopic }
+            .onEach {
+                currentTopic = it
+                if (it.isNotEmpty()) {
+                    refresh()
+                }
+            }
+            .launchIn(viewModelScope)
+
+        store.data.map { it.topicListList }
+            .onEach {
+                topicList.clear()
+                topicList.addAll(it)
+            }
+            .launchIn(viewModelScope)
     }
 
     private suspend fun loadTopics() {
         isLoading = true
         withContext(Dispatchers.IO) {
-            repo.getTopics(page, *TOPICS).fold(
+            repo.getTopics(page, currentTopic).fold(
                 onSuccess = { items.addAll(it) },
                 onFailure = { it.printStackTrace() }
             )
@@ -51,5 +70,25 @@ class TopicViewModel : ViewModel() {
         viewModelScope.launch {
             loadTopics()
         }
+    }
+
+    fun addTopic(topic: String) {
+        if (topic !in topicList)
+            viewModelScope.launch { store.update { addTopicList(topic) } }
+    }
+
+    fun removeTopic(topic: String) {
+        viewModelScope.launch {
+            store.update {
+                val list = topicListList.toMutableList()
+                list.remove(topic)
+                clearTopicList()
+                addAllTopicList(list)
+            }
+        }
+    }
+
+    fun setTopic(topic: String) {
+        viewModelScope.launch { store.update { setCurrentTopic(topic) } }
     }
 }

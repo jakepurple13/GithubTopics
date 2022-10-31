@@ -13,9 +13,14 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -25,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,7 +50,7 @@ class MainActivity : ComponentActivity() {
             GithubTopicsTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    GithubTopicUI()
+                    GithubTopicUI(vm = viewModel { TopicViewModel(store = topics) })
                 }
             }
         }
@@ -58,59 +64,58 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val state = rememberLazyListState()
     val showButton by remember { derivedStateOf { state.firstVisibleItemIndex > 0 } }
-    Scaffold(
-        topBar = {
-            LargeTopAppBar(
-                title = { Text(text = "Github Topics") },
-                actions = {
-                    AnimatedVisibility(visible = showButton) {
-                        IconButton(onClick = { scope.launch { state.animateScrollToItem(0) } }) {
-                            Icon(Icons.Default.ArrowUpward, null)
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    ModalNavigationDrawer(
+        drawerContent = { ModalDrawerSheet { TopicDrawer(vm) } },
+        drawerState = drawerState
+    ) {
+        Scaffold(
+            topBar = {
+                LargeTopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, null)
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior
-            )
-        },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-    ) { padding ->
-        val pullRefreshState = rememberPullRefreshState(refreshing = vm.isLoading, onRefresh = vm::refresh)
-        Box(
-            modifier = Modifier
-                .padding(padding)
-                .pullRefresh(pullRefreshState)
-        ) {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.fillMaxSize(),
-                state = state
+                    },
+                    title = { Text(text = "Github Topics") },
+                    actions = {
+                        AnimatedVisibility(visible = showButton) {
+                            IconButton(onClick = { scope.launch { state.animateScrollToItem(0) } }) {
+                                Icon(Icons.Default.ArrowUpward, null)
+                            }
+                        }
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+        ) { padding ->
+            val pullRefreshState = rememberPullRefreshState(refreshing = vm.isLoading, onRefresh = vm::refresh)
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .pullRefresh(pullRefreshState)
             ) {
-                item {
-                    FlowRow(modifier = Modifier.padding(4.dp)) {
-                        TopicViewModel.TOPICS.forEach {
-                            AssistChip(
-                                label = { Text(it) },
-                                modifier = Modifier.padding(2.dp),
-                                onClick = {}
-                            )
-                        }
-                    }
-                }
-                items(vm.items) { TopicItem(it) }
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    state = state
+                ) { items(vm.items) { TopicItem(it) } }
+
+                PullRefreshIndicator(
+                    refreshing = vm.isLoading, state = pullRefreshState,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    backgroundColor = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    scale = true
+                )
+
+                InfiniteListHandler(
+                    listState = state,
+                    onLoadMore = vm::newPage
+                )
             }
-
-            PullRefreshIndicator(
-                refreshing = vm.isLoading, state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter),
-                backgroundColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                scale = true
-            )
-
-            InfiniteListHandler(
-                listState = state,
-                onLoadMore = vm::newPage
-            )
         }
     }
 }
@@ -200,6 +205,59 @@ fun TopicItem(item: GitHubTopic) {
                     modifier = Modifier
                         .padding(4.dp)
                         .weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TopicDrawer(vm: TopicViewModel) {
+    var topicText by remember { mutableStateOf("") }
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Topics") }) },
+        bottomBar = {
+            BottomAppBar {
+                OutlinedTextField(
+                    value = topicText,
+                    onValueChange = { topicText = it },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(
+                        onNext = {
+                            vm.addTopic(topicText)
+                            topicText = ""
+                        }
+                    ),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                vm.addTopic(topicText)
+                                topicText = ""
+                            }
+                        ) { Icon(Icons.Default.Add, null) }
+                    }
+                )
+            }
+        }
+    ) { padding ->
+        LazyColumn(
+            contentPadding = padding,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(vm.topicList) {
+                NavigationDrawerItem(
+                    modifier = Modifier.padding(horizontal = 2.dp),
+                    label = { Text(it) },
+                    selected = it == vm.currentTopic,
+                    onClick = { vm.setTopic(it) },
+                    badge = {
+                        IconButton(
+                            onClick = { vm.removeTopic(it) }
+                        ) { Icon(Icons.Default.Close, null) }
+                    }
                 )
             }
         }

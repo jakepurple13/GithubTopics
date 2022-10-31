@@ -16,7 +16,7 @@ import java.time.ZoneId
 import java.util.*
 
 @Serializable
-data class Topics(
+data class GithubTopics(
     val items: List<GitHubTopic>
 )
 
@@ -72,7 +72,7 @@ class Network {
         val url =
             "https://api.github.com/search/repositories?q=" + topics.joinToString(separator = "+") { "topic:$it" } + "+sort:updated-desc&page=$page"
 
-        client.get(url).body<Topics>().items.map {
+        client.get(url).body<GithubTopics>().items.map {
             val date = Instant.parse(it.pushedAt).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             it.copy(pushedAt = timePrinter.format(Date(date)) + " on\n" + format.format(date))
         }
