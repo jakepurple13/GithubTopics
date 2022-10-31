@@ -1,7 +1,5 @@
 package com.programmersbox.githubtopics
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +16,11 @@ import java.time.ZoneId
 import java.util.*
 
 class TopicViewModel : ViewModel() {
+
+    companion object {
+        val TOPICS = arrayOf("jetpack-compose")
+    }
+
     private val repo = Network()
 
     val items = mutableStateListOf<GitHubTopic>()
@@ -37,7 +40,7 @@ class TopicViewModel : ViewModel() {
     private suspend fun loadTopics() {
         isLoading = true
         withContext(Dispatchers.IO) {
-            repo.getTopics(page, "jetpack-compose").fold(
+            repo.getTopics(page, *TOPICS).fold(
                 onSuccess = { items.addAll(it) },
                 onFailure = { it.printStackTrace() }
             )

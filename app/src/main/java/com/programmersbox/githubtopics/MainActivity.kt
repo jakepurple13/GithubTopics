@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -13,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -32,6 +35,7 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.programmersbox.githubtopics.ui.theme.GithubTopicsTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,9 +54,24 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
+    val scope = rememberCoroutineScope()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val state = rememberLazyListState()
+    val showButton by remember { derivedStateOf { state.firstVisibleItemIndex > 0 } }
     Scaffold(
-        topBar = { LargeTopAppBar(title = { Text(text = "Github Topics") }, scrollBehavior = scrollBehavior) },
+        topBar = {
+            LargeTopAppBar(
+                title = { Text(text = "Github Topics") },
+                actions = {
+                    AnimatedVisibility(visible = showButton) {
+                        IconButton(onClick = { scope.launch { state.animateScrollToItem(0) } }) {
+                            Icon(Icons.Default.ArrowUpward, null)
+                        }
+                    }
+                },
+                scrollBehavior = scrollBehavior
+            )
+        },
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { padding ->
         val pullRefreshState = rememberPullRefreshState(refreshing = vm.isLoading, onRefresh = vm::refresh)
@@ -61,12 +80,24 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
                 .padding(padding)
                 .pullRefresh(pullRefreshState)
         ) {
-            val state = rememberLazyListState()
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
                 modifier = Modifier.fillMaxSize(),
                 state = state
-            ) { items(vm.items) { TopicItem(item = it) } }
+            ) {
+                item {
+                    FlowRow(modifier = Modifier.padding(4.dp)) {
+                        TopicViewModel.TOPICS.forEach {
+                            AssistChip(
+                                label = { Text(it) },
+                                modifier = Modifier.padding(2.dp),
+                                onClick = {}
+                            )
+                        }
+                    }
+                }
+                items(vm.items) { TopicItem(item = it) }
+            }
 
             PullRefreshIndicator(
                 refreshing = vm.isLoading, state = pullRefreshState,
