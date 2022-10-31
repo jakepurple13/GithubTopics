@@ -8,6 +8,7 @@ import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -15,10 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() {
-
-    companion object {
-        val TOPICS = arrayOf("jetpack-compose")
-    }
 
     private val repo = Network()
     val items = mutableStateListOf<GitHubTopic>()
@@ -30,6 +27,7 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
     init {
         store.data
             .map { it.currentTopic }
+            .distinctUntilChanged()
             .onEach {
                 currentTopic = it
                 if (it.isNotEmpty()) {
@@ -39,6 +37,7 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
             .launchIn(viewModelScope)
 
         store.data.map { it.topicListList }
+            .distinctUntilChanged()
             .onEach {
                 topicList.clear()
                 topicList.addAll(it)
