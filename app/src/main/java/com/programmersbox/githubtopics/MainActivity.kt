@@ -96,7 +96,7 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
                         }
                     }
                 }
-                items(vm.items) { TopicItem(item = it) }
+                items(vm.items) { TopicItem(it) }
             }
 
             PullRefreshIndicator(
@@ -147,7 +147,7 @@ private fun Context.openWebPage(url: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopicItem(vm: TopicViewModel = viewModel(), item: GitHubTopic) {
+fun TopicItem(item: GitHubTopic) {
     val context = LocalContext.current
     OutlinedCard(
         onClick = { context.openWebPage(item.htmlUrl) }
@@ -185,7 +185,7 @@ fun TopicItem(vm: TopicViewModel = viewModel(), item: GitHubTopic) {
 
             Row {
                 Text(
-                    text = "Updated ${vm.formatTimestamp(item.pushedAt)}",
+                    text = "Updated ${item.pushedAt}",
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Start,
                     modifier = Modifier

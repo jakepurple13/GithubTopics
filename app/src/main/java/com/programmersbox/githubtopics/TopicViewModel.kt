@@ -9,11 +9,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.ocpsoft.prettytime.PrettyTime
-import java.text.SimpleDateFormat
-import java.time.Instant
-import java.time.ZoneId
-import java.util.*
 
 class TopicViewModel : ViewModel() {
 
@@ -22,14 +17,9 @@ class TopicViewModel : ViewModel() {
     }
 
     private val repo = Network()
-
     val items = mutableStateListOf<GitHubTopic>()
-
-    private var page = 1
-
     var isLoading by mutableStateOf(true)
-
-    private val timePrinter = PrettyTime()
+    private var page = 1
 
     init {
         viewModelScope.launch {
@@ -61,12 +51,5 @@ class TopicViewModel : ViewModel() {
         viewModelScope.launch {
             loadTopics()
         }
-    }
-
-    // take timestamp and return a formatted string
-    fun formatTimestamp(timestamp: String): String {
-        val format = SimpleDateFormat.getDateTimeInstance()
-        val date = Instant.parse(timestamp).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        return timePrinter.format(Date(date)) + " on\n" + format.format(date)
     }
 }

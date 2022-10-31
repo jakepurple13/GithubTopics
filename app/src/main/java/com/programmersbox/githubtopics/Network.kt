@@ -9,6 +9,11 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.ocpsoft.prettytime.PrettyTime
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.util.*
 
 @Serializable
 data class Topics(
@@ -60,10 +65,16 @@ class Network {
         }
     }
 
+    private val timePrinter = PrettyTime()
+    private val format = SimpleDateFormat.getDateTimeInstance()
+
     suspend fun getTopics(page: Int, vararg topics: String) = runCatching {
         val url =
             "https://api.github.com/search/repositories?q=" + topics.joinToString(separator = "+") { "topic:$it" } + "+sort:updated-desc&page=$page"
 
-        client.get(url).body<Topics>().items
+        client.get(url).body<Topics>().items.map {
+            val date = Instant.parse(it.pushedAt).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            it.copy(pushedAt = timePrinter.format(Date(date)) + " on\n" + format.format(date))
+        }
     }
 }
