@@ -104,7 +104,7 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.fillMaxSize(),
                     state = state
-                ) { items(vm.items) { TopicItem(it, vm.topicList, vm.currentTopic, vm::addTopic) } }
+                ) { items(vm.items) { TopicItem(it, vm.topicList, vm.currentTopics, vm::addTopic) } }
 
                 PullRefreshIndicator(
                     refreshing = vm.isLoading, state = pullRefreshState,
@@ -155,7 +155,12 @@ private fun Context.openWebPage(url: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopicItem(item: GitHubTopic, savedTopics: List<String>, currentTopic: String, onTopicClick: (String) -> Unit) {
+fun TopicItem(
+    item: GitHubTopic,
+    savedTopics: List<String>,
+    currentTopics: List<String>,
+    onTopicClick: (String) -> Unit
+) {
     val context = LocalContext.current
     OutlinedCard(
         onClick = { context.openWebPage(item.htmlUrl) }
@@ -187,7 +192,7 @@ fun TopicItem(item: GitHubTopic, savedTopics: List<String>, currentTopic: String
                         label = { Text(it) },
                         modifier = Modifier.padding(2.dp),
                         onClick = { onTopicClick(it) },
-                        leadingIcon = if (it == currentTopic) {
+                        leadingIcon = if (it in currentTopics) {
                             { Icon(Icons.Default.CatchingPokemon, null) }
                         } else null,
                         border = AssistChipDefaults.assistChipBorder(
@@ -266,7 +271,7 @@ fun TopicDrawer(vm: TopicViewModel) {
                 NavigationDrawerItem(
                     modifier = Modifier.padding(horizontal = 2.dp),
                     label = { Text(it) },
-                    selected = it == vm.currentTopic,
+                    selected = it in vm.currentTopics,
                     onClick = { vm.setTopic(it) },
                     badge = {
                         IconButton(

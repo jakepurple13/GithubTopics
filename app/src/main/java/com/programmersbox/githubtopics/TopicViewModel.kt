@@ -21,16 +21,17 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
     val items = mutableStateListOf<GitHubTopic>()
     var isLoading by mutableStateOf(true)
     private var page = 1
-    var currentTopic by mutableStateOf("")
+    val currentTopics = mutableStateListOf<String>()
     val topicList = mutableStateListOf<String>()
 
     init {
         store.data
-            .map { it.currentTopic }
+            .map { it.currentTopicsListList }
             .distinctUntilChanged()
             .onEach {
-                currentTopic = it
-                if (it.isNotEmpty()) {
+                currentTopics.clear()
+                currentTopics.addAll(it)
+                if (it.isNotEmpty() && it.all { t -> t.isNotEmpty() }) {
                     refresh()
                 }
             }
@@ -48,7 +49,7 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
     private suspend fun loadTopics() {
         isLoading = true
         withContext(Dispatchers.IO) {
-            repo.getTopics(page, currentTopic).fold(
+            repo.getTopics(page, *currentTopics.toTypedArray()).fold(
                 onSuccess = { items.addAll(it) },
                 onFailure = { it.printStackTrace() }
             )
@@ -72,7 +73,7 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
     }
 
     fun addTopic(topic: String) {
-        if (topic !in topicList)
+        if (topic !in topicList && topic.isNotEmpty())
             viewModelScope.launch { store.update { addTopicList(topic) } }
     }
 
@@ -88,6 +89,17 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
     }
 
     fun setTopic(topic: String) {
-        viewModelScope.launch { store.update { setCurrentTopic(topic) } }
+        viewModelScope.launch {
+            store.update {
+                if (topic !in currentTopicsListList) {
+                    addCurrentTopicsList(topic)
+                } else {
+                    val list = currentTopicsListList.toMutableList()
+                    list.remove(topic)
+                    clearCurrentTopicsList()
+                    addAllCurrentTopicsList(list)
+                }
+            }
+        }
     }
 }
