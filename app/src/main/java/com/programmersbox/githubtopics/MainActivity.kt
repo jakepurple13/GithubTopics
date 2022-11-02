@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -27,6 +28,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
@@ -77,16 +79,18 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
             topBar = {
                 LargeTopAppBar(
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, null)
-                        }
+                        IconsButton(
+                            onClick = { scope.launch { drawerState.open() } },
+                            icon = Icons.Default.Menu
+                        )
                     },
                     title = { Text(text = "Github Topics") },
                     actions = {
                         AnimatedVisibility(visible = showButton) {
-                            IconButton(onClick = { scope.launch { state.animateScrollToItem(0) } }) {
-                                Icon(Icons.Default.ArrowUpward, null)
-                            }
+                            IconsButton(
+                                onClick = { scope.launch { state.animateScrollToItem(0) } },
+                                icon = Icons.Default.ArrowUpward
+                            )
                         }
                     },
                     scrollBehavior = scrollBehavior
@@ -167,7 +171,7 @@ fun TopicItem(
     ) {
         Column(modifier = Modifier.padding(4.dp)) {
             ListItem(
-                headlineText = { Text(item.fullName) },
+                headlineText = { Text(item.name) },
                 overlineText = {
                     Text(
                         item.fullName,
@@ -184,6 +188,18 @@ fun TopicItem(
                         )
                     }
                 },
+                trailingContent = {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Star, contentDescription = null)
+                            Text(item.stars.toString())
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.ForkLeft, contentDescription = null)
+                            Text(item.forks.toString())
+                        }
+                    }
+                }
             )
 
             FlowRow(modifier = Modifier.padding(4.dp)) {
@@ -203,6 +219,13 @@ fun TopicItem(
                         )
                     )
                 }
+            }
+
+            item.license?.let {
+                Text(
+                    it.name,
+                    modifier = Modifier.padding(4.dp)
+                )
             }
 
             Row {
@@ -251,12 +274,13 @@ fun TopicDrawer(vm: TopicViewModel) {
                         }
                     ),
                     trailingIcon = {
-                        IconButton(
+                        IconsButton(
                             onClick = {
                                 vm.addTopic(topicText)
                                 topicText = ""
-                            }
-                        ) { Icon(Icons.Default.Add, null) }
+                            },
+                            icon = Icons.Default.Add
+                        )
                     }
                 )
             }
@@ -273,16 +297,22 @@ fun TopicDrawer(vm: TopicViewModel) {
                     label = { Text(it) },
                     selected = it in vm.currentTopics,
                     onClick = { vm.setTopic(it) },
-                    badge = {
-                        IconButton(
-                            onClick = { vm.removeTopic(it) }
-                        ) { Icon(Icons.Default.Close, null) }
-                    }
+                    badge = { IconsButton(onClick = { vm.removeTopic(it) }, icon = Icons.Default.Close) }
                 )
             }
         }
     }
 }
+
+@Composable
+fun IconsButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+) = IconButton(onClick, modifier, enabled, colors, interactionSource) { Icon(icon, null) }
 
 @Preview(showBackground = true)
 @Composable

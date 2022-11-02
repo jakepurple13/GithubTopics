@@ -37,8 +37,11 @@ data class GitHubTopic(
     @SerialName("stargazers_count")
     val stars: Int,
     val watchers: Int,
+    @SerialName("forks_count")
+    val forks: Int = 0,
     val language: String = "No language",
     val owner: Owner,
+    val license: License? = null,
     val topics: List<String> = emptyList()
 )
 
@@ -46,6 +49,11 @@ data class GitHubTopic(
 data class Owner(
     @SerialName("avatar_url")
     val avatarUrl: String? = null
+)
+
+@Serializable
+data class License(
+    val name: String,
 )
 
 class Network {
