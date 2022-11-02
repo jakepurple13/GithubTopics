@@ -63,14 +63,13 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
 
     fun newPage() {
         page++
-        viewModelScope.launch {
-            loadTopics()
-        }
+        viewModelScope.launch { loadTopics() }
     }
 
     fun addTopic(topic: String) {
-        if (topic !in topicList && topic.isNotEmpty())
+        if (topic !in topicList && topic.isNotEmpty()) {
             viewModelScope.launch { store.update { addTopicList(topic) } }
+        }
     }
 
     fun removeTopic(topic: String) {
