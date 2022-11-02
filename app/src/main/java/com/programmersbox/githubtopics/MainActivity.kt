@@ -5,8 +5,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -17,10 +19,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -57,7 +56,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
     val scope = rememberCoroutineScope()
@@ -65,6 +64,10 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
     val state = rememberLazyListState()
     val showButton by remember { derivedStateOf { state.firstVisibleItemIndex > 0 } }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    BackHandler(drawerState.isOpen) {
+        scope.launch { drawerState.close() }
+    }
 
     ModalNavigationDrawer(
         drawerContent = { ModalDrawerSheet { TopicDrawer(vm) } },
@@ -101,7 +104,7 @@ fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.fillMaxSize(),
                     state = state
-                ) { items(vm.items) { TopicItem(it, vm::addTopic) } }
+                ) { items(vm.items) { TopicItem(it, vm.topicList, vm.currentTopic, vm::addTopic) } }
 
                 PullRefreshIndicator(
                     refreshing = vm.isLoading, state = pullRefreshState,
@@ -152,7 +155,7 @@ private fun Context.openWebPage(url: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopicItem(item: GitHubTopic, onTopicClick: (String) -> Unit) {
+fun TopicItem(item: GitHubTopic, savedTopics: List<String>, currentTopic: String, onTopicClick: (String) -> Unit) {
     val context = LocalContext.current
     OutlinedCard(
         onClick = { context.openWebPage(item.htmlUrl) }
@@ -183,7 +186,16 @@ fun TopicItem(item: GitHubTopic, onTopicClick: (String) -> Unit) {
                     AssistChip(
                         label = { Text(it) },
                         modifier = Modifier.padding(2.dp),
-                        onClick = { onTopicClick(it) }
+                        onClick = { onTopicClick(it) },
+                        leadingIcon = if (it == currentTopic) {
+                            { Icon(Icons.Default.CatchingPokemon, null) }
+                        } else null,
+                        border = AssistChipDefaults.assistChipBorder(
+                            borderColor = when (it) {
+                                in savedTopics -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.outline
+                            }
+                        )
                     )
                 }
             }
@@ -223,6 +235,9 @@ fun TopicDrawer(vm: TopicViewModel) {
                     value = topicText,
                     onValueChange = { topicText = it },
                     singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(
                         onNext = {
