@@ -8,10 +8,7 @@ import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -31,10 +28,9 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
             .onEach {
                 currentTopics.clear()
                 currentTopics.addAll(it)
-                if (it.isNotEmpty() && it.all { t -> t.isNotEmpty() }) {
-                    refresh()
-                }
             }
+            .filter { it.isNotEmpty() && it.all { t -> t.isNotEmpty() } }
+            .onEach { refresh() }
             .launchIn(viewModelScope)
 
         store.data.map { it.topicListList }
