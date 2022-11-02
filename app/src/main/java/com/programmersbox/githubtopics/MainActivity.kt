@@ -28,6 +28,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -209,7 +210,7 @@ fun TopicItem(
                         modifier = Modifier.padding(2.dp),
                         onClick = { onTopicClick(it) },
                         leadingIcon = if (it in currentTopics) {
-                            { Icon(Icons.Default.CatchingPokemon, null) }
+                            { Icon(Icons.Default.CatchingPokemon, null, modifier = Modifier.rotate(180f)) }
                         } else null,
                         border = AssistChipDefaults.assistChipBorder(
                             borderColor = when (it) {
