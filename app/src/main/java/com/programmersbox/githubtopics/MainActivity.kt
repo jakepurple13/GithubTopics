@@ -1,6 +1,5 @@
 package com.programmersbox.githubtopics
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -32,9 +31,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -50,6 +51,8 @@ import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.halilibo.richtext.markdown.Markdown
+import com.halilibo.richtext.ui.CodeBlockStyle
+import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.Material3RichText
 import com.programmersbox.githubtopics.ui.theme.GithubTopicsTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -75,7 +78,7 @@ class MainActivity : ComponentActivity() {
                             composable(
                                 Screen.Repo.route + "/{topic}",
                                 arguments = listOf(navArgument("topic") { type = NavType.StringType })
-                            ) { GithubRepo() }
+                            ) { GithubRepo(vm = viewModel { RepoViewModel(createSavedStateHandle(), topics) }) }
                         }
                     }
                 }
@@ -175,12 +178,6 @@ fun InfiniteListHandler(
             .distinctUntilChanged()
             .collect { onLoadMore() }
     }
-}
-
-private fun Context.openWebPage(url: String) {
-    val webpage: Uri = Uri.parse(url)
-    val intent = Intent(Intent.ACTION_VIEW, webpage)
-    startActivity(intent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -343,10 +340,11 @@ fun IconsButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GithubRepo(vm: RepoViewModel = viewModel { RepoViewModel(createSavedStateHandle()) }) {
-    val context = LocalContext.current
+fun GithubRepo(vm: RepoViewModel = viewModel()) {
+    val uriHandler = LocalUriHandler.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val navController = LocalNavController.current
+    val context = LocalContext.current
 
     if (vm.error) {
         AlertDialog(
@@ -363,20 +361,66 @@ fun GithubRepo(vm: RepoViewModel = viewModel { RepoViewModel(createSavedStateHan
                 navigationIcon = {
                     IconsButton(onClick = { navController.popBackStack() }, icon = Icons.Default.ArrowBack)
                 },
-                title = { Text(vm.item.name) },
+                title = {
+                    ListItem(
+                        headlineText = { Text(vm.item.name, style = MaterialTheme.typography.titleLarge) },
+                        overlineText = { Text(vm.item.fullName) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                },
                 actions = {
-                    IconsButton(onClick = { context.openWebPage(vm.item.htmlUrl) }, icon = Icons.Default.OpenInBrowser)
+                    var showDropDownMenu by remember { mutableStateOf(false) }
+
+                    DropdownMenu(expanded = showDropDownMenu, onDismissRequest = { showDropDownMenu = false }) {
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Default.OpenInBrowser, null) },
+                            text = { Text("Open in Browser") },
+                            onClick = {
+                                showDropDownMenu = false
+                                uriHandler.openUri(vm.item.htmlUrl)
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Default.Share, null) },
+                            text = { Text("Share") },
+                            onClick = {
+                                showDropDownMenu = false
+                                val sendIntent: Intent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, vm.item.htmlUrl)
+                                    putExtra(Intent.EXTRA_TITLE, vm.item.name)
+                                    type = "text/plain"
+                                }
+
+                                val shareIntent = Intent.createChooser(sendIntent, null)
+                                context.startActivity(shareIntent)
+                            }
+                        )
+                    }
+
+                    IconsButton(onClick = { showDropDownMenu = true }, icon = Icons.Default.MoreVert)
                 },
                 scrollBehavior = scrollBehavior
             )
         },
         bottomBar = {
-            BottomAppBar(modifier = Modifier.height(60.dp)) {
-                OutlinedButton(
-                    onClick = { context.openWebPage(vm.item.htmlUrl) },
-                    modifier = Modifier.fillMaxSize()
-                ) { Text("Open in Browser") }
-            }
+            BottomAppBar(
+                floatingActionButton = {
+                    ExtendedFloatingActionButton(
+                        text = { Text("Open in Browser") },
+                        icon = { Icon(Icons.Default.OpenInBrowser, null) },
+                        onClick = { uriHandler.openUri(vm.item.htmlUrl) })
+                },
+                actions = {
+                    NavigationBarItem(
+                        selected = vm.wordWrap,
+                        onClick = { vm.setWrapping(!vm.wordWrap) },
+                        icon = { Icon(Icons.Default.WrapText, null) },
+                        label = { Text("Wrap Text") }
+                    )
+                }
+            )
         },
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { padding ->
@@ -393,15 +437,15 @@ fun GithubRepo(vm: RepoViewModel = viewModel { RepoViewModel(createSavedStateHan
                             .padding(padding)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        Material3RichText(modifier = Modifier.padding(horizontal = 4.dp)) {
-                            Markdown(vm.repo)
-                        }
+                        Material3RichText(
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            style = RichTextStyle.Default.copy(codeBlockStyle = CodeBlockStyle.Default.copy(wordWrap = vm.wordWrap))
+                        ) { Markdown(vm.repoContent) }
                     }
                 }
             }
         }
     }
-
 }
 
 @Preview(showBackground = true)

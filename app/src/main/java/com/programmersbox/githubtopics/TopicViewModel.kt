@@ -101,19 +101,24 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
     }
 }
 
-class RepoViewModel(handle: SavedStateHandle) : ViewModel() {
-    val item by lazy {
-        handle.get<String>("topic")!!.let { Json.decodeFromString<GitHubTopic>(it) }
-    }
-
-    var repo by mutableStateOf("")
+class RepoViewModel(
+    handle: SavedStateHandle,
+    private val store: DataStore<TopicSettings>
+) : ViewModel() {
+    val item by lazy { handle.get<String>("topic")!!.let { Json.decodeFromString<GitHubTopic>(it) } }
+    var repoContent by mutableStateOf("")
     var error by mutableStateOf(false)
     var loading by mutableStateOf(true)
+    var wordWrap by mutableStateOf(false)
 
     init {
+        store.data.map { it.wrapText }
+            .onEach { wordWrap = it }
+            .launchIn(viewModelScope)
+
         viewModelScope.launch {
             Network.getReadMe(item.fullName).fold(
-                onSuccess = { repo = it },
+                onSuccess = { repoContent = it },
                 onFailure = {
                     it.printStackTrace()
                     error = true
@@ -121,5 +126,9 @@ class RepoViewModel(handle: SavedStateHandle) : ViewModel() {
             )
             loading = false
         }
+    }
+
+    fun setWrapping(wrap: Boolean) {
+        viewModelScope.launch { store.update { setWrapText(wrap) } }
     }
 }

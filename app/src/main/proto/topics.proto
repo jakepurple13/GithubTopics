@@ -6,4 +6,5 @@ option java_multiple_files = true;
 message TopicSettings {
   repeated string topicList = 1;
   repeated string currentTopicsList = 2;
+  bool wrapText = 3;
 }
