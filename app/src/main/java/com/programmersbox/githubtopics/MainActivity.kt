@@ -49,12 +49,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
-import com.halilibo.richtext.markdown.Markdown
-import com.halilibo.richtext.ui.CodeBlockStyle
-import com.halilibo.richtext.ui.RichText
-import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material3.SetupMaterial3RichText
 import com.programmersbox.githubtopics.ui.theme.GithubTopicsTheme
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -65,22 +61,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             GithubTopicsTheme {
-                SetupMaterial3RichText {
-                    // A surface container using the 'background' color from the theme
-                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        val navController = rememberNavController()
-                        CompositionLocalProvider(
-                            LocalNavController provides navController,
-                        ) {
-                            NavHost(navController = navController, startDestination = Screen.Topics.route) {
-                                composable(Screen.Topics.route) {
-                                    GithubTopicUI(vm = viewModel { TopicViewModel(store = topics) })
-                                }
-                                composable(
-                                    Screen.Repo.route + "/{topic}",
-                                    arguments = listOf(navArgument("topic") { type = NavType.StringType })
-                                ) { GithubRepo(vm = viewModel { RepoViewModel(createSavedStateHandle(), topics) }) }
+                // A surface container using the 'background' color from the theme
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    val navController = rememberNavController()
+                    CompositionLocalProvider(
+                        LocalNavController provides navController,
+                    ) {
+                        NavHost(navController = navController, startDestination = Screen.Topics.route) {
+                            composable(Screen.Topics.route) {
+                                GithubTopicUI(vm = viewModel { TopicViewModel(store = topics) })
                             }
+                            composable(
+                                Screen.Repo.route + "/{topic}",
+                                arguments = listOf(navArgument("topic") { type = NavType.StringType })
+                            ) { GithubRepo(vm = viewModel { RepoViewModel(createSavedStateHandle(), topics) }) }
                         }
                     }
                 }
@@ -416,10 +410,20 @@ fun GithubRepo(vm: RepoViewModel = viewModel()) {
                 },
                 actions = {
                     NavigationBarItem(
-                        selected = vm.wordWrap,
-                        onClick = { vm.setWrapping(!vm.wordWrap) },
-                        icon = { Icon(Icons.Default.WrapText, null) },
-                        label = { Text("Wrap Text") }
+                        selected = false,
+                        onClick = {
+                            val sendIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, vm.item.htmlUrl)
+                                putExtra(Intent.EXTRA_TITLE, vm.item.name)
+                                type = "text/plain"
+                            }
+
+                            val shareIntent = Intent.createChooser(sendIntent, null)
+                            context.startActivity(shareIntent)
+                        },
+                        icon = { Icon(Icons.Default.Share, null) },
+                        label = { Text("Share") }
                     )
                 }
             )
@@ -439,10 +443,12 @@ fun GithubRepo(vm: RepoViewModel = viewModel()) {
                             .padding(padding)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        RichText(
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            style = RichTextStyle.Default.copy(codeBlockStyle = CodeBlockStyle.Default.copy(wordWrap = vm.wordWrap))
-                        ) { Markdown(vm.repoContent) }
+                        MarkdownText(
+                            markdown = vm.repoContent,
+                            style = LocalTextStyle.current,
+                            color = LocalContentColor.current,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
                     }
                 }
             }

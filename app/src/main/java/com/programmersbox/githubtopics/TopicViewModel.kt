@@ -109,13 +109,8 @@ class RepoViewModel(
     var repoContent by mutableStateOf("")
     var error by mutableStateOf(false)
     var loading by mutableStateOf(true)
-    var wordWrap by mutableStateOf(false)
 
     init {
-        store.data.map { it.wrapText }
-            .onEach { wordWrap = it }
-            .launchIn(viewModelScope)
-
         viewModelScope.launch {
             Network.getReadMe(item.fullName).fold(
                 onSuccess = { repoContent = it },
@@ -126,9 +121,5 @@ class RepoViewModel(
             )
             loading = false
         }
-    }
-
-    fun setWrapping(wrap: Boolean) {
-        viewModelScope.launch { store.update { setWrapText(wrap) } }
     }
 }
