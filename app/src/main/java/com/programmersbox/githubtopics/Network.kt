@@ -24,6 +24,7 @@ data class GithubTopics(
 data class GitHubTopic(
     @SerialName("html_url")
     val htmlUrl: String,
+    val url: String,
     val name: String,
     @SerialName("full_name")
     val fullName: String,
@@ -42,6 +43,8 @@ data class GitHubTopic(
     val language: String = "No language",
     val owner: Owner,
     val license: License? = null,
+    @SerialName("default_branch")
+    val branch: String,
     val topics: List<String> = emptyList()
 )
 
@@ -56,7 +59,13 @@ data class License(
     val name: String,
 )
 
-class Network {
+@Serializable
+data class GitHubRepo(
+    val content: String,
+    val encoding: String,
+)
+
+object Network {
     private val client by lazy {
         HttpClient {
             install(Logging)
@@ -84,5 +93,11 @@ class Network {
             val date = Instant.parse(it.pushedAt).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             it.copy(pushedAt = "Updated " + timePrinter.format(Date(date)) + " on\n" + format.format(date))
         }
+    }
+
+    suspend fun getReadMe(fullName: String) = runCatching {
+        client.get("https://api.github.com/repos/$fullName/readme") {
+            header("Accept", "application/vnd.github.raw+json")
+        }.body<String>()
     }
 }

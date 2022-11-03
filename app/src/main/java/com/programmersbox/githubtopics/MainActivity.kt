@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -15,9 +16,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -37,13 +40,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
+import com.halilibo.richtext.markdown.Markdown
+import com.halilibo.richtext.ui.material3.Material3RichText
 import com.programmersbox.githubtopics.ui.theme.GithubTopicsTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +64,20 @@ class MainActivity : ComponentActivity() {
             GithubTopicsTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    GithubTopicUI(vm = viewModel { TopicViewModel(store = topics) })
+                    val navController = rememberNavController()
+                    CompositionLocalProvider(
+                        LocalNavController provides navController,
+                    ) {
+                        NavHost(navController = navController, startDestination = Screen.Topics.route) {
+                            composable(Screen.Topics.route) {
+                                GithubTopicUI(vm = viewModel { TopicViewModel(store = topics) })
+                            }
+                            composable(
+                                Screen.Repo.route + "/{topic}",
+                                arguments = listOf(navArgument("topic") { type = NavType.StringType })
+                            ) { GithubRepo() }
+                        }
+                    }
                 }
             }
         }
@@ -166,9 +191,10 @@ fun TopicItem(
     currentTopics: List<String>,
     onTopicClick: (String) -> Unit
 ) {
-    val context = LocalContext.current
+    val navController = LocalNavController.current
+    val json = LocalJson.current
     OutlinedCard(
-        onClick = { context.openWebPage(item.htmlUrl) }
+        onClick = { navController.navigate(Screen.Repo.route + "/${Uri.encode(json.encodeToString(item))}") }
     ) {
         Column(modifier = Modifier.padding(4.dp)) {
             ListItem(
@@ -314,6 +340,69 @@ fun IconsButton(
     colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
 ) = IconButton(onClick, modifier, enabled, colors, interactionSource) { Icon(icon, null) }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GithubRepo(vm: RepoViewModel = viewModel { RepoViewModel(createSavedStateHandle()) }) {
+    val context = LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val navController = LocalNavController.current
+
+    if (vm.error) {
+        AlertDialog(
+            onDismissRequest = { vm.error = false },
+            title = { Text("Something went wrong") },
+            text = { Text("Something went wrong. Either something happened with the connection or this repo has no readme") },
+            confirmButton = { TextButton(onClick = { vm.error = false }) { Text("Dismiss") } }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconsButton(onClick = { navController.popBackStack() }, icon = Icons.Default.ArrowBack)
+                },
+                title = { Text(vm.item.name) },
+                actions = {
+                    IconsButton(onClick = { context.openWebPage(vm.item.htmlUrl) }, icon = Icons.Default.OpenInBrowser)
+                },
+                scrollBehavior = scrollBehavior
+            )
+        },
+        bottomBar = {
+            BottomAppBar(modifier = Modifier.height(60.dp)) {
+                OutlinedButton(
+                    onClick = { context.openWebPage(vm.item.htmlUrl) },
+                    modifier = Modifier.fillMaxSize()
+                ) { Text("Open in Browser") }
+            }
+        },
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+    ) { padding ->
+        Crossfade(targetState = vm.loading) { loading ->
+            when (loading) {
+                true -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                false -> {
+                    Column(
+                        modifier = Modifier
+                            .padding(padding)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Material3RichText(modifier = Modifier.padding(horizontal = 4.dp)) {
+                            Markdown(vm.repo)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}
 
 @Preview(showBackground = true)
 @Composable

@@ -5,16 +5,18 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() {
 
-    private val repo = Network()
     val items = mutableStateListOf<GitHubTopic>()
     var isLoading by mutableStateOf(true)
     private var page = 1
@@ -45,7 +47,7 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
     private suspend fun loadTopics() {
         isLoading = true
         withContext(Dispatchers.IO) {
-            repo.getTopics(page, *currentTopics.toTypedArray()).fold(
+            Network.getTopics(page, *currentTopics.toTypedArray()).fold(
                 onSuccess = { items.addAll(it) },
                 onFailure = { it.printStackTrace() }
             )
@@ -95,6 +97,29 @@ class TopicViewModel(private val store: DataStore<TopicSettings>) : ViewModel() 
                     addAllCurrentTopicsList(list)
                 }
             }
+        }
+    }
+}
+
+class RepoViewModel(handle: SavedStateHandle) : ViewModel() {
+    val item by lazy {
+        handle.get<String>("topic")!!.let { Json.decodeFromString<GitHubTopic>(it) }
+    }
+
+    var repo by mutableStateOf("")
+    var error by mutableStateOf(false)
+    var loading by mutableStateOf(true)
+
+    init {
+        viewModelScope.launch {
+            Network.getReadMe(item.fullName).fold(
+                onSuccess = { repo = it },
+                onFailure = {
+                    it.printStackTrace()
+                    error = true
+                }
+            )
+            loading = false
         }
     }
 }
