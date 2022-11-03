@@ -8,7 +8,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -52,8 +51,9 @@ import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.CodeBlockStyle
+import com.halilibo.richtext.ui.RichText
 import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material3.Material3RichText
+import com.halilibo.richtext.ui.material3.SetupMaterial3RichText
 import com.programmersbox.githubtopics.ui.theme.GithubTopicsTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -65,20 +65,22 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             GithubTopicsTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    val navController = rememberNavController()
-                    CompositionLocalProvider(
-                        LocalNavController provides navController,
-                    ) {
-                        NavHost(navController = navController, startDestination = Screen.Topics.route) {
-                            composable(Screen.Topics.route) {
-                                GithubTopicUI(vm = viewModel { TopicViewModel(store = topics) })
+                SetupMaterial3RichText {
+                    // A surface container using the 'background' color from the theme
+                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                        val navController = rememberNavController()
+                        CompositionLocalProvider(
+                            LocalNavController provides navController,
+                        ) {
+                            NavHost(navController = navController, startDestination = Screen.Topics.route) {
+                                composable(Screen.Topics.route) {
+                                    GithubTopicUI(vm = viewModel { TopicViewModel(store = topics) })
+                                }
+                                composable(
+                                    Screen.Repo.route + "/{topic}",
+                                    arguments = listOf(navArgument("topic") { type = NavType.StringType })
+                                ) { GithubRepo(vm = viewModel { RepoViewModel(createSavedStateHandle(), topics) }) }
                             }
-                            composable(
-                                Screen.Repo.route + "/{topic}",
-                                arguments = listOf(navArgument("topic") { type = NavType.StringType })
-                            ) { GithubRepo(vm = viewModel { RepoViewModel(createSavedStateHandle(), topics) }) }
                         }
                     }
                 }
@@ -87,7 +89,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun GithubTopicUI(vm: TopicViewModel = viewModel()) {
     val scope = rememberCoroutineScope()
@@ -437,7 +439,7 @@ fun GithubRepo(vm: RepoViewModel = viewModel()) {
                             .padding(padding)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        Material3RichText(
+                        RichText(
                             modifier = Modifier.padding(horizontal = 4.dp),
                             style = RichTextStyle.Default.copy(codeBlockStyle = CodeBlockStyle.Default.copy(wordWrap = vm.wordWrap))
                         ) { Markdown(vm.repoContent) }
