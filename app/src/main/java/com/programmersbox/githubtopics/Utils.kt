@@ -154,7 +154,8 @@ private fun createMarkdownRender(context: Context, imageLoader: ImageLoader?): M
                 add(GifDecoder.Factory())
             }
         }
-        .apply { crossfade(true) }.build()
+        .crossfade(true)
+        .build()
 
     return Markwon.builder(context)
         .usePlugin(HtmlPlugin.create())
