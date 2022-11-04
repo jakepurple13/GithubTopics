@@ -5,9 +5,11 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.ocpsoft.prettytime.PrettyTime
 import java.text.SimpleDateFormat
@@ -65,20 +67,28 @@ data class GitHubRepo(
     val encoding: String,
 )
 
+@Serializable
+sealed class ReadMeResponse {
+    class Success(val content: String) : ReadMeResponse()
+
+    @Serializable
+    class Failed(val message: String) : ReadMeResponse()
+
+    object Loading : ReadMeResponse()
+}
+
 object Network {
+    private val json = Json {
+        isLenient = true
+        prettyPrint = true
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
+
     private val client by lazy {
         HttpClient {
             install(Logging)
-            install(ContentNegotiation) {
-                json(
-                    Json {
-                        isLenient = true
-                        prettyPrint = true
-                        ignoreUnknownKeys = true
-                        coerceInputValues = true
-                    }
-                )
-            }
+            install(ContentNegotiation) { json(json) }
         }
     }
 
@@ -96,8 +106,14 @@ object Network {
     }
 
     suspend fun getReadMe(fullName: String) = runCatching {
-        client.get("https://api.github.com/repos/$fullName/readme") {
+        val response = client.get("https://api.github.com/repos/$fullName/readme") {
             header("Accept", "application/vnd.github.raw+json")
-        }.body<String>()
+        }.bodyAsText()
+
+        try {
+            json.decodeFromString<ReadMeResponse.Failed>(response)
+        } catch (e: Exception) {
+            ReadMeResponse.Success(response)
+        }
     }
 }

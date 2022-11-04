@@ -106,9 +106,8 @@ class RepoViewModel(
     private val store: DataStore<TopicSettings>
 ) : ViewModel() {
     val item by lazy { handle.get<String>("topic")!!.let { Json.decodeFromString<GitHubTopic>(it) } }
-    var repoContent by mutableStateOf("")
+    var repoContent by mutableStateOf<ReadMeResponse>(ReadMeResponse.Loading)
     var error by mutableStateOf(false)
-    var loading by mutableStateOf(true)
 
     init {
         viewModelScope.launch {
@@ -119,7 +118,6 @@ class RepoViewModel(
                     error = true
                 }
             )
-            loading = false
         }
     }
 }

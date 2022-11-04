@@ -431,21 +431,29 @@ fun GithubRepo(vm: RepoViewModel = viewModel()) {
         },
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { padding ->
-        Crossfade(targetState = vm.loading) { loading ->
-            when (loading) {
-                true -> {
+        Crossfade(targetState = vm.repoContent) { content ->
+            when (content) {
+                is ReadMeResponse.Failed -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            content.message + "\nThis repo may not have a ReadMe file. Please visit in browser",
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                ReadMeResponse.Loading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
-                false -> {
+                is ReadMeResponse.Success -> {
                     Column(
                         modifier = Modifier
                             .padding(padding)
                             .verticalScroll(rememberScrollState())
                     ) {
                         MarkdownText(
-                            markdown = vm.repoContent,
+                            markdown = content.content,
                             modifier = Modifier.padding(4.dp)
                         )
                     }
