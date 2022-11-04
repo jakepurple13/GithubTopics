@@ -4,6 +4,7 @@ plugins {
     id 'kotlinx-serialization'
     id "com.google.protobuf" version "0.8.17"
     id 'com.google.devtools.ksp' version '1.7.20-1.0.7'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -95,7 +96,20 @@ dependencies {
     implementation "com.google.protobuf:protobuf-javalite:$protobuf_version"
     implementation "com.google.protobuf:protobuf-kotlin-lite:$protobuf_version"
 
-    implementation 'com.github.jeziellago:compose-markdown:0.3.1'
+    def markwon_version = '4.6.2'
+    implementation "io.noties.markwon:core:$markwon_version"
+    implementation "io.noties.markwon:ext-strikethrough:$markwon_version"
+    implementation "io.noties.markwon:ext-tables:$markwon_version"
+    implementation "io.noties.markwon:html:$markwon_version"
+    implementation "io.noties.markwon:linkify:$markwon_version"
+    implementation "io.noties.markwon:image-coil:$markwon_version"
+    implementation("io.noties.markwon:syntax-highlight:$markwon_version") {
+        exclude group: 'org.jetbrains', module: 'annotations-java5'
+    }
+
+    kapt 'io.noties:prism4j-bundler:2.0.0'
+
+    implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.25'
 }
 
 protobuf {

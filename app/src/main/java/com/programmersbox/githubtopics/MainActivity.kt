@@ -50,12 +50,13 @@ import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.programmersbox.githubtopics.ui.theme.GithubTopicsTheme
-import dev.jeziellago.compose.markdowntext.MarkdownText
+import io.noties.prism4j.annotations.PrismBundle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 
+@PrismBundle(includeAll = true)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -445,9 +446,7 @@ fun GithubRepo(vm: RepoViewModel = viewModel()) {
                     ) {
                         MarkdownText(
                             markdown = vm.repoContent,
-                            style = LocalTextStyle.current,
-                            color = LocalContentColor.current,
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            modifier = Modifier.padding(4.dp)
                         )
                     }
                 }
